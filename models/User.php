@@ -2,9 +2,22 @@
 
 namespace app\models;
 
-class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
+use Yii;
+use yii\behaviors\TimestampBehavior;
+use yii\db\Expression;
+
+/**
+ * This is the model class for table "user".
+ *
+ * @property int $id
+ * @property string|null $user_name
+ * @property string|null $created_at
+ *
+ * @property Person[] $people
+ */
+class User extends \yii\db\ActiveRecord implements \yii\web\IdentityInterface
 {
-    public $id;
+//    public $id;
     public $username;
     public $password;
     public $authKey;
@@ -27,6 +40,71 @@ class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
         ],
     ];
 
+    /**
+     * @inheritDoc
+     */
+    public function behaviors()
+    {
+        return [
+            [
+                'class' => TimestampBehavior::className(),
+                'createdAtAttribute' => 'created_at',
+                'updatedAtAttribute' => false,
+                'value' => new Expression('NOW()'),
+            ],
+        ];
+    }
+
+
+    /**
+     * {@inheritdoc}
+     */
+    public static function tableName(): string
+    {
+        return 'user';
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function rules()
+    {
+        return [
+            [['created_at'], 'safe'],
+            [['user_name'], 'string', 'max' => 255],
+        ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function attributeLabels(): array
+    {
+        return [
+            'id' => 'ID',
+            'user_name' => 'User Name',
+            'created_at' => 'Created At',
+        ];
+    }
+
+    /**
+     * Gets query for [[People]].
+     *
+     * @return \yii\db\ActiveQuery|PersonQuery
+     */
+    public function getPeople()
+    {
+        return $this->hasMany(Person::className(), ['user_id' => 'id']);
+    }
+
+    /**
+     * {@inheritdoc}
+     * @return UserQuery the active query used by this AR class.
+     */
+    public static function find(): UserQuery
+    {
+        return new UserQuery(get_called_class());
+    }
 
     /**
      * {@inheritdoc}
@@ -56,7 +134,7 @@ class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
      * @param string $username
      * @return static|null
      */
-    public static function findByUsername($username)
+    public static function findByUsername($username): ?User
     {
         foreach (self::$users as $user) {
             if (strcasecmp($user['username'], $username) === 0) {
@@ -78,7 +156,7 @@ class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
     /**
      * {@inheritdoc}
      */
-    public function getAuthKey()
+    public function getAuthKey(): string
     {
         return $this->authKey;
     }
@@ -86,7 +164,7 @@ class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
     /**
      * {@inheritdoc}
      */
-    public function validateAuthKey($authKey)
+    public function validateAuthKey($authKey): bool
     {
         return $this->authKey === $authKey;
     }
@@ -97,7 +175,7 @@ class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
      * @param string $password password to validate
      * @return bool if password provided is valid for current user
      */
-    public function validatePassword($password)
+    public function validatePassword($password): bool
     {
         return $this->password === $password;
     }
